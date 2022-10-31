@@ -62,12 +62,13 @@ See `/RTKLIB/doc/manual_2.4.2.pdf` or download from `https://www.rtklib.com/rtkl
 
 In `/learning_rtklib/build`, compile the example codes
 ```
+mkdir build
+cd build
 cmake ..
 make
 ```
 
 To use them, run
 ```
-cd learning_rtklib/build
 ./spp_example.cpp
 ```
