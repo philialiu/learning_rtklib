@@ -1,1 +1,0 @@
-/usr/bin/c++  -g  -rdynamic CMakeFiles/ppp_example.dir/ppp_example.cpp.o  -o ppp_example -Wl,-Bstatic -lrtklib -Wl,-Bdynamic 

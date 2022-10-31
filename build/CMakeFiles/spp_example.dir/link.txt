@@ -1,1 +1,0 @@
-/usr/bin/c++  -g  -rdynamic CMakeFiles/spp_example.dir/spp_example.cpp.o  -o spp_example -Wl,-Bstatic -lrtklib -Wl,-Bdynamic 

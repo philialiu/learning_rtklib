@@ -1,1 +1,0 @@
-/usr/bin/c++  -g  -rdynamic CMakeFiles/ppp_satpos_example.dir/ppp_satpos_example.cpp.o  -o ppp_satpos_example -Wl,-Bstatic -lrtklib -Wl,-Bdynamic 
