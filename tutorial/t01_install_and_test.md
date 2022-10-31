@@ -72,3 +72,8 @@ To use them, run
 ```
 ./spp_example.cpp
 ```
+
+To debug in VSCode, add the following line into `"args"` in the `/.vscode/tasks.json`
+```
+"-l:librtklib.a",
+```
