@@ -1,0 +1,18 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/philia/Documents/learning_rtklib/ppp_example.cpp
+stdio.h
+-
+assert.h
+-
+rtklib.h
+-
+iostream
+-
+

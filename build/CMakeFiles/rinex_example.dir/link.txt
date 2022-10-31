@@ -1,0 +1,1 @@
+/usr/bin/c++  -g  -rdynamic CMakeFiles/rinex_example.dir/rinex_example.cpp.o  -o rinex_example -Wl,-Bstatic -lrtklib -Wl,-Bdynamic 

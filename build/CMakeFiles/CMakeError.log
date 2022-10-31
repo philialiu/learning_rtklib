@@ -1,0 +1,17 @@
+Detecting C [-std=c11] compiler features failed to compile with the following output:
+Change Dir: /home/philia/Documents/learning_rtklib/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_2ed4c/fast 
+/usr/bin/make -f CMakeFiles/cmTC_2ed4c.dir/build.make CMakeFiles/cmTC_2ed4c.dir/build
+make[1]: Entering directory '/home/philia/Documents/learning_rtklib/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_2ed4c.dir/feature_tests.c.o
+/usr/bin/c89-gcc   -std=c11 -o CMakeFiles/cmTC_2ed4c.dir/feature_tests.c.o   -c /home/philia/Documents/learning_rtklib/build/CMakeFiles/feature_tests.c
+c89-gcc called with non ANSI/ISO C option -std=c11
+CMakeFiles/cmTC_2ed4c.dir/build.make:65: recipe for target 'CMakeFiles/cmTC_2ed4c.dir/feature_tests.c.o' failed
+make[1]: *** [CMakeFiles/cmTC_2ed4c.dir/feature_tests.c.o] Error 1
+make[1]: Leaving directory '/home/philia/Documents/learning_rtklib/build/CMakeFiles/CMakeTmp'
+Makefile:121: recipe for target 'cmTC_2ed4c/fast' failed
+make: *** [cmTC_2ed4c/fast] Error 2
+
+
+

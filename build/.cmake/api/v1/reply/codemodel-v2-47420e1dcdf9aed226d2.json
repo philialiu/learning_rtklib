@@ -1,0 +1,104 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.1"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4,
+						5
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "rtklib_example",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4,
+						5
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "ppp_example::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ppp_example-Debug-185d033972fbd4119745.json",
+					"name" : "ppp_example",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "ppp_satpos_example::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ppp_satpos_example-Debug-d8ddfe97ca15cf1196c4.json",
+					"name" : "ppp_satpos_example",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "rinex_example::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-rinex_example-Debug-d9007bffe9e550d88fe4.json",
+					"name" : "rinex_example",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "rtk_example::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-rtk_example-Debug-0c95863e859c6a30d86f.json",
+					"name" : "rtk_example",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "satpos_example::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-satpos_example-Debug-99d013336e0d8cd9e3a0.json",
+					"name" : "satpos_example",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "spp_example::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-spp_example-Debug-ab2172c36f0636eefd18.json",
+					"name" : "spp_example",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/philia/Documents/learning_rtklib/build",
+		"source" : "/home/philia/Documents/learning_rtklib"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 0
+	}
+}

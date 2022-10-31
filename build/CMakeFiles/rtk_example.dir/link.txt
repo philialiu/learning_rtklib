@@ -1,0 +1,1 @@
+/usr/bin/c++  -g  -rdynamic CMakeFiles/rtk_example.dir/rtk_example.cpp.o  -o rtk_example -Wl,-Bstatic -lrtklib -Wl,-Bdynamic 
