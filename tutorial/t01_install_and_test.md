@@ -13,9 +13,9 @@
 
     `https://github.com/tomojitakasu/RTKLIB`
 
-    GUI is not supported in Linux.
+    GUI is not officially supported in Linux. `https://github.com/rtklibexplorer/RTKLIB` can be a good supplement.
 
-    Compile into a static library (See README.md Sec 8).
+    Compile RTKLIB into a static library (See README.md Sec 8).
 
 
 ## User Manual
