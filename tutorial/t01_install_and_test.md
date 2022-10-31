@@ -15,7 +15,35 @@
 
     GUI is not officially supported in Linux. `https://github.com/rtklibexplorer/RTKLIB` can be a good supplement.
 
-    Compile RTKLIB into a static library (See README.md Sec 8). It should be found as `/RTKLIB/src/build/librtklib.a`.
+    Create `CMakeLists.txt` under `RTKLIB/src`
+
+    ```
+    cmake_minimum_required(VERSION 3.1)
+    project(rtklib)
+
+    add_definitions(-DTRACE)#enable trace in rtklib
+
+    set(RTKLIB_SRC convkml.c convrnx.c datum.c download.c ephemeris.c geoid.c ionex.c lambda.c options.c pntpos.c postpos.c ppp_ar.c ppp.c preceph.c qzslex.c rcvraw.c rinex.c rtcm2.c rtcm3.c rtcm3e.c rtcm.c rtkcmn.c rtkpos.c rtksvr.c sbas.c solution.c stream.c streamsvr.c tle.c)
+    add_library(rtklib STATIC ${RTKLIB_SRC})
+
+    install(TARGETS rtklib
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib)
+
+    install(FILES rtklib.h DESTINATION include)
+    ```
+    
+    Compile RTKLIB into a static library
+
+    ```
+    mkdir build
+    cd build
+    cmake ..
+    make
+    sudo make install
+    ```
+    
+    It should be found as `/RTKLIB/src/build/librtklib.a`.
 
 
 ## User Manual
@@ -40,6 +68,6 @@ make
 
 To use them, run
 ```
-cd /learning_rtklib/build
+cd learning_rtklib/build
 ./spp_example.cpp
 ```
