@@ -89,6 +89,7 @@ static int nextobsf(const obs_t *obs, int *i, int rcv)
             break;
     for (n = 0; *i + n < obs->n; n++)
     {
+        /* time difference (t1-t2) (s) */
         tt = timediff(obs->data[*i + n].time, obs->data[*i].time);
         if (obs->data[*i + n].rcv != rcv || tt > DTTOL)
             break;
@@ -157,6 +158,7 @@ int main(int argc, char **argv)
     readrnxt(file1, 1, ts, te, 0.0, "", &obs, &nav, &sta);
     readrnxt(file2, 1, t0, t0, 0.0, "", &obs, &nav, &sta);
 
+    /* trace for debug */
     traceopen("spp.trace");
     tracelevel(4);
     tracenav(2, &nav);
@@ -166,6 +168,8 @@ int main(int argc, char **argv)
     pntpos_process(&obs, &nav, &opt);
 
     traceclose();
+
+    /* free the memory */
     free(obs.data);
     return 0;
 }
