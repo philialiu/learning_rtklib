@@ -95,6 +95,8 @@ static int nextobsf(const obs_t *obs, int *i, int rcv)
     }
     return n;
 }
+
+/* positioning */
 void pntpos_process(obs_t *obs, nav_t *nav, prcopt_t *opt)
 {
     gtime_t time = {0};
@@ -109,6 +111,7 @@ void pntpos_process(obs_t *obs, nav_t *nav, prcopt_t *opt)
     for (i = 0; i < 3; i++)
         ra[i] = 0.0;
 
+    /* set carrier wave lengths */
     for (int i = 0; i < NSATGPS; i++)
     {
         nav->lam[i][0] = CLIGHT / FREQ1;
@@ -118,6 +121,7 @@ void pntpos_process(obs_t *obs, nav_t *nav, prcopt_t *opt)
 
     for (int i = 0; (m = nextobsf(obs, &i, rcv)) > 0; i += m)
     {
+        /* single-point positioning */
         int ret = pntpos(&obs->data[i], m, nav, opt, &sol, NULL, NULL, msg);
         if (ret == 1)//1：OK, 0: error
         {
@@ -149,6 +153,7 @@ int main(int argc, char **argv)
     nav_t nav = {0};
     sta_t sta = {""};
 
+    /* read rinex files */
     readrnxt(file1, 1, ts, te, 0.0, "", &obs, &nav, &sta);
     readrnxt(file2, 1, t0, t0, 0.0, "", &obs, &nav, &sta);
 
@@ -156,6 +161,7 @@ int main(int argc, char **argv)
     tracelevel(4);
     tracenav(2, &nav);
 
+    /* defaults processing options */
     prcopt_t opt = prcopt_default;
     pntpos_process(&obs, &nav, &opt);
 

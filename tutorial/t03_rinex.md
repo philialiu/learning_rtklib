@@ -17,3 +17,9 @@ RINEX 3: `https://www.gnss.help/2017/04/22/rinex3-introduction/index.html`
 
 
 ## Decode Files
+
+In `/src/rinex.c`
+
+```
+readrnxt()
+```
