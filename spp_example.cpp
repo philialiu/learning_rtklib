@@ -79,6 +79,8 @@ static void dumpopt(const prcopt_t *opt)
 
     printf("std: %lf,%lf,%lf\n", opt->std[0], opt->std[1], opt->std[2]);
 }
+
+/* number of observation data in the current epoch */
 static int nextobsf(const obs_t *obs, int *i, int rcv)
 {
     double tt;
@@ -141,8 +143,12 @@ void pntpos_process(obs_t *obs, nav_t *nav, prcopt_t *opt)
 int main(int argc, char **argv)
 {
     gtime_t t0 = {0}, ts = {0}, te = {0};
-    char file1[1024] = "../data/rinex/daej229a00.20n";
-    char file2[1024] = "../data/rinex/daej229a00.20o";
+
+    char file1[1024] = "data/rinex/daej229a00.20n";
+    char file2[1024] = "data/rinex/daej229a00.20o";
+
+    // char file1[1024] = "../data/rinex/daej229a00.20n";
+    // char file2[1024] = "../data/rinex/daej229a00.20o";
 
     if (argc == 3)
     {
@@ -155,8 +161,10 @@ int main(int argc, char **argv)
     sta_t sta = {""};
 
     /* read rinex files */
-    readrnxt(file1, 1, ts, te, 0.0, "", &obs, &nav, &sta);
-    readrnxt(file2, 1, t0, t0, 0.0, "", &obs, &nav, &sta);
+    int stat1 = readrnxt(file1, 1, ts, te, 0.0, "", &obs, &nav, &sta);
+    int stat2 = readrnxt(file2, 1, t0, t0, 0.0, "", &obs, &nav, &sta);
+
+    cout << stat1 << stat2 << endl;
 
     /* trace for debug */
     traceopen("spp.trace");

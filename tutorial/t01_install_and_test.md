@@ -60,6 +60,8 @@ See `/RTKLIB/doc/manual_2.4.2.pdf` or download from <https://www.rtklib.com/rtkl
 
 ## Usage of Example Codes
 
+### Compile with CMakeLists.txt
+
 In `/learning_rtklib/build`, compile the example codes
 ```
 mkdir build
@@ -73,7 +75,13 @@ To use them, run
 ./spp_example.cpp
 ```
 
+### Debug Mode
+
 To debug in VSCode, add the following line into `"args"` in the `/.vscode/tasks.json`
 ```
 "-l:librtklib.a",
 ```
+
+The file path in the codes should be modified:
+
+`"../data/rinex/daej229a00.20n"` -> `"data/rinex/daej229a00.20n"`.
