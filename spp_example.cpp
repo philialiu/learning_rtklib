@@ -126,7 +126,7 @@ void pntpos_process(obs_t *obs, nav_t *nav, prcopt_t *opt)
     {
         /* single-point positioning */
         int ret = pntpos(&obs->data[i], m, nav, opt, &sol, NULL, NULL, msg);
-        if (ret == 1)//1：OK, 0: error
+        if (ret == 1) // 1：OK, 0: error
         {
             double ep[6] = {0};
             time2epoch(sol.time, ep);
@@ -164,6 +164,7 @@ int main(int argc, char **argv)
     int stat1 = readrnxt(file1, 1, ts, te, 0.0, "", &obs, &nav, &sta);
     int stat2 = readrnxt(file2, 1, t0, t0, 0.0, "", &obs, &nav, &sta);
 
+    /* check the status of reading rinex files */
     cout << stat1 << stat2 << endl;
 
     /* trace for debug */
