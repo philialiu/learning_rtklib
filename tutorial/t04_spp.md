@@ -8,21 +8,21 @@ In `src/pntpos.c`, main function:
 pntpos()
 ```
 
-* Satellite solution: `satposs()`
+1. Satellite solution: `satposs()`
 
-* Receiver position solution by iteration (using pseudorange): `estpos()`
-
-    * Calculate pseudorange residuals `v`: `rescode()`
-
-    * Use Least Square to get the position solution: `lsq()`
-
-* FDE if receiver position estimation failed: `raim_fde()` , that is to estimate the position by deleting a satellite every time and thus find the faulty satellite 
-
-* Receiver velocity solution by iteration (using doppler): `estvel()`
+2. Receiver position solution by iteration (using pseudorange): `estpos()`
+   
+   1. Calculate pseudorange residuals $v$: `rescode()`
   
-  * Calculate doppler residuals: `resdop()`
+   2. Use Least Square to get the position solution: `lsq()`
 
-  * Use Least Square to get the velocity solution: `lsp()`
+3. FDE if receiver position estimation failed: `raim_fde()` , that is to estimate the position by deleting a satellite every time and thus find the faulty satellite 
+
+4. Receiver velocity solution by iteration (using doppler): `estvel()`
+
+   1. Calculate doppler residuals: `resdop()`
+
+   2. Use Least Square to get the velocity solution: `lsq()`
 
 
 ## Code Explanation Reference

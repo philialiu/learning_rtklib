@@ -42,50 +42,66 @@
 伪距方程：
 
 $$
-\rho = r + c (\delta t_{user} - \delta t_{sat}) + I + T + \epsilon
+\rho = r + c (\delta t_{rcvr} - \delta t_{sat}) + I + T + \epsilon
 $$
 
 定位解算：
 
-* 牛顿迭代与线性化：在点$x_{k-1}$处一阶泰勒展开（线性化），计算$\Delta x$，更新得到$x_{k} = x_{k-1} + \Delta x$。这意味着每次迭代都会更新线性化点
+* 牛顿迭代与线性化：在点 $x_{k-1}$ 处一阶泰勒展开（线性化），计算 $\Delta x$ ，更新得到 $x_{k} = x_{k-1} + \Delta x$ 。这意味着每次迭代都会更新线性化点
 
-* 计算变化量$\Delta x$：使用最小二乘求解
+* 计算变化量 $\Delta x$ ：使用最小二乘求解
 
     $$
     G \cdot \Delta x = b
     $$
 
-    $G$为几何矩阵，$b$为残差：$b = \rho -(r + c (\delta t_{user} - \delta t_{sat}) + I + T)$。
+    $G$为几何矩阵，$b$为残差：$b = \rho -(r + c (\delta t_{rcvr} - \delta t_{sat}) + I + T)$。
 
-    RTKlib的函数`lsq()`中使用$Ax=y$表示。
+    RTKlib的函数`lsq()`中使用 $Ax=y$ 表示。
 
 
 ### 2.2 差分定位 Differential GPS
 
-利用基站(rover)，消除伪距观测量的公共误差。差分计算用户(user)到基站(rover)的相对位置（基线向量）。
+利用基站(base station)，消除伪距观测量的公共误差。差分计算用户(rover)到基站的相对位置（基线向量）。
 
 * 单差：站间，消除卫星钟差、星历误差，（短基线）消除大气延时误差，
 
 $$
-\rho ^{i}_{ur} = r^{i}_{ur} + c \delta t_{ur} + \epsilon ^{i}_{ur}
+{\rho}^{i}_{rb} = r^{i}_{rb} + c \delta t_{rb} + {\epsilon}^{i}_{rb}
 $$
 
 * 双差：站间星间，进一步消除接收机钟差，
 
 $$
-\rho ^{ij}_{ur} = r^{ij}_{ur} + \epsilon ^{ij}_{ur}
+{\rho}^{ij}_{rb} = r^{ij}_{rb} + {\epsilon}^{ij}_{rb}
 $$
 
 
 ### 2.3 实时动态载波相位差分 RTK
 
-单差：
+载波相位方程：
 
 $$
-\phi ^{i}_{ur} = \lambda ^{-1} r^{i}_{ur} + f \delta t_{ur} + N^{i}_{ur} + \epsilon ^{i}_{\phi, ur}
+{\phi} = {\lambda}^{-1} (r - I + T) + f (\delta t_{rcvr} - \delta t_{sat}) + N + \epsilon
 $$
 
-$\lambda$为波长，$f$为载波频率，$N$为整周模糊度。
+$\lambda$ 为波长， $f$ 为载波频率， $N$ 为整周模糊度。
+
+* 单差：
+
+$$
+{\phi}^{i}_{rb} = {\lambda}^{-1} r^{i}_{rb} + f \delta t_{rb} + N^{i}_{rb} + {\epsilon}^{i}_{\phi, rb}
+$$
+
+* 双差：
+
+$$
+{\phi}^{i}_{rb} = {\lambda}^{-1} r^{ij}_{rb} + N^{ij}_{rb} + {\epsilon}^{ij}_{\phi, rb}
+$$
+
+定位解算：
+
+
 
 
 ## 参考 Reference

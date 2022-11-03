@@ -83,9 +83,9 @@ static int get_sat_cnt(const obs_t *obs, int i, int m, int rcv)
 int main(int argc, char **argv)
 {
     gtime_t t0 = {0}, ts = {0}, te = {0};
-    char file1[] = "../data/07590920.05n";
-    char file2[] = "../data/07590920.05o";
-    char file3[] = "../data/30400920.05o";
+    char file1[] = "data/07590920.05n";
+    char file2[] = "data/07590920.05o";
+    char file3[] = "data/30400920.05o";
     int ret;
     obs_t obs = {0};
     nav_t nav = {0};
@@ -100,6 +100,8 @@ int main(int argc, char **argv)
 
     //2 -> base station
     ret = readrnxt(file3, 2, t0, t0, 0.0, "", &obs, &nav, &sta);
+
+    /* sort obs according to epoch */
     sortobs(&obs);
 
     printf("station pos: %lf,%lf,%lf\n", sta.pos[0], sta.pos[1], sta.pos[2]);

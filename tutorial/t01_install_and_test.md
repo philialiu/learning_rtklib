@@ -6,7 +6,7 @@
 
     <https://www.rtklib.com/rtklib.htm>
 
-    DO NOT download the beta version.
+    The beta version is not recommended.
 
 
 * for Linux:
