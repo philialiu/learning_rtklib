@@ -8,6 +8,6 @@
 
 [03 RINEX](tutorial/t03_rinex.md)
 
-[04 SPP](tutorial/t04_spp.md)
+[04 Single Point Positioning](tutorial/t04_spp.md)
 
-[05 RTK](tutorial/t05_rtk.md)
+[05 Real-Time Kinematic](tutorial/t05_rtk.md)

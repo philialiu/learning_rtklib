@@ -2,7 +2,11 @@
 
 ## RTK
 
-In `rtkpos.c`,
+In `rtkpos.c`, main function:
+
+```
+rtkpos()
+```
 
 * relative positioning: `relpos()`
 

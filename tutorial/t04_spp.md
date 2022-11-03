@@ -2,7 +2,7 @@
 
 ## Single Point Positioning
 
-In `/src/pntpos.c`, main func:
+In `src/pntpos.c`, main function:
 
 ```
 pntpos()
@@ -12,7 +12,7 @@ pntpos()
 
 * Receiver position solution by iteration (using pseudorange): `estpos()`
 
-    * Calculate pseudorange residuals: `rescode()`
+    * Calculate pseudorange residuals `v`: `rescode()`
 
     * Use Least Square to get the position solution: `lsq()`
 

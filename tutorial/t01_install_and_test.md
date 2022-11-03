@@ -43,26 +43,26 @@
     sudo make install
     ```
     
-    It should be found as `/RTKLIB/src/build/librtklib.a`.
+    It should be found as `RTKLIB/src/build/librtklib.a`.
 
 
 ## User Manual
 
-See `/RTKLIB/doc/manual_2.4.2.pdf` or download from <https://www.rtklib.com/rtklib_document.htm>
+See `RTKLIB/doc/manual_2.4.2.pdf` or download from <https://www.rtklib.com/rtklib_document.htm>
 
 
 ## Samples
 
 * Download from <https://www.rtklib.com/rtklib_tutorial.htm> (The corresponding tutorial is for Windows)
 
-* Use test data in `/RTKLIB/test/data/rinex`
+* Use test data in `RTKLIB/test/data/rinex`
 
 
 ## Usage of Example Codes
 
 ### Compile with CMakeLists.txt
 
-In `/learning_rtklib/build`, compile the example codes
+In `learning_rtklib/build`, compile the example codes
 ```
 mkdir build
 cd build
@@ -77,7 +77,7 @@ To use them, run
 
 ### Debug Mode
 
-To debug in VSCode, add the following line into `"args"` in the `/.vscode/tasks.json`
+To debug in VSCode, add the following line into `"args"` in the `.vscode/tasks.json`
 ```
 "-l:librtklib.a",
 ```

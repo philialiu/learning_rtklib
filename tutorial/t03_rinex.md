@@ -18,7 +18,7 @@ RINEX 3: <https://www.gnss.help/2017/04/22/rinex3-introduction/index.html>
 
 ## Read RINEX Files
 
-In `/src/rinex.c`, main function:
+In `src/rinex.c`, main function:
 
 ```
 readrnxt()
