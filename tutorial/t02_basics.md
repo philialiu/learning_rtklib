@@ -55,7 +55,7 @@ $$
     G \cdot \Delta x = b
     $$
 
-    $G$为几何矩阵，$b$为残差：$b = \rho -(r + c (\delta t_{rcvr} - \delta t_{sat}) + I + T)$。
+    $G$ 为几何矩阵， $b$ 为残差： $b = \rho -(r + c (\delta t_{rcvr} - \delta t_{sat}) + I + T)$
 
     RTKlib的函数`lsq()`中使用 $Ax=y$ 表示。
 
@@ -64,13 +64,13 @@ $$
 
 利用基站(base station)，消除伪距观测量的公共误差。差分计算用户(rover)到基站的相对位置（基线向量）。
 
-* 单差：站间，消除卫星钟差、星历误差，（短基线）消除大气延时误差，
+* 单差 (SD)：站间，消除卫星钟差、星历误差，（短基线）消除大气延时误差，
 
 $$
 {\rho}^{i}_{rb} = r^{i}_{rb} + c \delta t_{rb} + {\epsilon}^{i}_{rb}
 $$
 
-* 双差：站间星间，进一步消除接收机钟差，
+* 双差 (DD)：站间星间，进一步消除接收机钟差，
 
 $$
 {\rho}^{ij}_{rb} = r^{ij}_{rb} + {\epsilon}^{ij}_{rb}
@@ -101,7 +101,9 @@ $$
 
 定位解算：
 
+* EKF：计算双差残差作为新息，状态、量测矩阵见 RTKLIB Manual p163
 
+* LAMBDA算法整周模糊度固定：
 
 
 ## 参考 Reference
