@@ -16,6 +16,30 @@ RINEX 2: <https://zhuanlan.zhihu.com/p/480371751>
 RINEX 3: <https://www.gnss.help/2017/04/22/rinex3-introduction/index.html>
 
 
+## Convert raw data to RINEX
+
+* For Windows: 
+
+  Use _RTKCONV_ app
+
+* For Linux:
+
+  Installation: In `RTKLIB/app/convbin/gcc`, open the terminal
+
+  ```
+  make
+  sudo make install
+  ```
+  
+  Use _convbin_ command to convert files:
+
+
+  ```
+  convbin <file name> -r <format, e.g. rtcm3> -v 3.03
+  ```
+
+  Create a .sh file to process massive data
+
 ## Read RINEX Files
 
 In `src/rinex.c`, main function:
