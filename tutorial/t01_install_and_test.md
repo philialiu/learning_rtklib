@@ -6,7 +6,7 @@
 
     <https://www.rtklib.com/rtklib.htm>
 
-    The beta version is not recommended.
+    The beta version is recommended.
 
 
 * for Linux:
@@ -104,6 +104,9 @@ The file path in the codes should be modified:
 * In __Options...__:
 
   * In __Setting 1__, select positioning mode (RTK: Kinematic), satellite systems.
+  
   * In __Positions__, fill in the position of base station according to obs file. 
+    
     Select appropriate coordinates.
+    
     Make sure Q is 1 (1 = fix) most of the time when processing.

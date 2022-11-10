@@ -60,6 +60,17 @@ readrnxt()
 
   * Read navigation data: `readrnxnav()`, where `readrnxnavb()` reads data for one satellite
 
+To use other satellite systems, add to `rtklib.h`:
+
+```
+#define ENAGLO
+#define ENAGAL
+#define ENACMP
+#define ENAQZS
+#define ENAIRN
+```
+
+Then make again in `src/build`.
 
 
 ## Code Explanation Reference
