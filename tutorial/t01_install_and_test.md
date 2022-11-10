@@ -85,3 +85,23 @@ To debug in VSCode, add the following line into `"args"` in the `.vscode/tasks.j
 The file path in the codes should be modified:
 
 `"../data/rinex/daej229a00.20n"` -> `"data/rinex/daej229a00.20n"`.
+
+
+## Usage of GUI apps in Windows
+
+### raw data convertion: RTKCONV
+
+* If the input file is formatted in RTCM, specify the version of RTCM. 
+
+  Windows: change the file extension.
+  
+  Linux: use `-r` to specify the format type.
+
+* In __Options...__, select RINEX version and satellite systems of the output file.
+
+### post-processing: RTKPOST
+
+* In __Options...__:
+
+  * In __Setting 1__, select positioning mode (RTK: Kinematic), satellite systems.
+  * In __Positions__, fill in the position of base station according to obs file. Select appropriate coordinates.
