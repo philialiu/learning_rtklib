@@ -89,7 +89,7 @@ The file path in the codes should be modified:
 
 ## Usage of GUI apps in Windows
 
-### raw data convertion: RTKCONV
+### Raw data conversion: RTKCONV
 
 * If the input file is formatted in RTCM, specify the version of RTCM. 
 
@@ -99,7 +99,7 @@ The file path in the codes should be modified:
 
 * In __Options...__, select RINEX version and satellite systems of the output file.
 
-### post-processing: RTKPOST
+### Post-processing: RTKPOST
 
 * In __Options...__:
 
