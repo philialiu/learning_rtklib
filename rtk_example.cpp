@@ -122,12 +122,12 @@ int main(int argc, char **argv)
     rtk_t rtk;
     rtkinit(&rtk, &prcopt);
 
-    for (int i = 0; i < NSATGPS; i++)
-    {
-        nav.lam[i][0] = CLIGHT / FREQ1;
-        nav.lam[i][1] = CLIGHT / FREQ2;
-        nav.lam[i][2] = CLIGHT / FREQ5;
-    }
+    // for (int i = 0; i < NSATGPS; i++)
+    // {
+    //     nav.lam[i][0] = CLIGHT / FREQ1;
+    //     nav.lam[i][1] = CLIGHT / FREQ2;
+    //     nav.lam[i][2] = CLIGHT / FREQ5;
+    // }
 
 
     traceopen("rtk.trace");

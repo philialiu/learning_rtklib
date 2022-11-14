@@ -35,7 +35,7 @@ RINEX 3: <https://www.gnss.help/2017/04/22/rinex3-introduction/index.html>
 
 
   ```
-  convbin <file name> -r <format, e.g. rtcm3> -v 3.03
+  convbin <file name> -r <format, e.g. rtcm3> -tr <date, time> -v 3.03 -f 5
   ```
 
   Create a .sh file to process massive data

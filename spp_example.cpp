@@ -114,13 +114,13 @@ void pntpos_process(obs_t *obs, nav_t *nav, prcopt_t *opt)
     for (i = 0; i < 3; i++)
         ra[i] = 0.0;
 
-    /* set carrier wave lengths */
-    for (int i = 0; i < NSATGPS; i++)
-    {
-        nav->lam[i][0] = CLIGHT / FREQ1;
-        nav->lam[i][1] = CLIGHT / FREQ2;
-        nav->lam[i][2] = CLIGHT / FREQ5;
-    }
+    /* set carrier wave lengths (v2.4.2) */
+    // for (int i = 0; i < NSATGPS; i++)
+    // {
+    //     nav->lam[i][0] = CLIGHT / FREQ1;
+    //     nav->lam[i][1] = CLIGHT / FREQ2;
+    //     nav->lam[i][2] = CLIGHT / FREQ5;
+    // }
 
     for (int i = 0; (m = nextobsf(obs, &i, rcv)) > 0; i += m)
     {
