@@ -17,7 +17,7 @@
 #define MIN_EL      (5.0*D2R)   /* min elevation for measurement error (rad) */
 
 /* --------- basic functions ----------- */
-static void cmatd(double *matrx, int n)
+static void cmatd(double *matrx, int n) // output matrix
 {
     for (int i=0;i<n;i++) {
         for (int j=0;j<n;j++) {
@@ -37,7 +37,7 @@ static void cmatf(float *matrx, int n)
     }
 }
 
-static void carrd(double *x, int n)
+static void carrd(double *x, int n) // output array
 {
     for (int i=0;i<n;i++) {
         std::cout << x[i] << ' ';
@@ -45,7 +45,7 @@ static void carrd(double *x, int n)
     std::cout << std::endl;
 }
 
-static void csat(obsd_t *obs, int n)
+static void csat(obsd_t *obs, int n) // output satellite system
 {
     int sat, sys, i;
     for (i=0;i<n;i++) {
@@ -53,10 +53,9 @@ static void csat(obsd_t *obs, int n)
         sys=satsys(sat,NULL);
         std::cout << sys << std::endl;
     }
-    
 }
 
-static int nextobsf(const obs_t *obs, int *i, int rcv)
+static int nextobsf(const obs_t *obs, int *i, int rcv) // find next epoch
 {
     double tt;
     int n;
@@ -74,7 +73,7 @@ static int nextobsf(const obs_t *obs, int *i, int rcv)
     return n;
 }
 
-char* charcat(const char* str1, const char* str2)
+char* charcat(const char* str1, const char* str2) // concatenate string
 {
     char* str3 = new char[1024];
     strcpy(str3, str1);
@@ -205,7 +204,7 @@ static int rescode(int iter, const obsd_t *obs, int n, const double *rs,
     trace(3,"resprng : n=%d\n",n);
     
     for (i=0;i<3;i++) rr[i]=x[i];
-    dtr=x[3];
+    dtr=x[9];
     
     ecef2pos(rr,pos);
     
@@ -227,7 +226,7 @@ static int rescode(int iter, const obsd_t *obs, int n, const double *rs,
         /* geometric distance */
         if ((r=geodist(rs+i*6,rr,e))<=0.0) continue;
         
-        if (iter>0) {
+        if (iter>=0) {
             /* test elevation mask */
             if (satazel(pos,e,azel+i*2)<opt->elmin) continue;
             
@@ -249,16 +248,26 @@ static int rescode(int iter, const obsd_t *obs, int n, const double *rs,
         
         /* pseudorange residual */
         v[nv]=P-(r+dtr-CLIGHT*dts[i*2]+dion+dtrp);
-        
+
         /* design matrix */
         for (j=0;j<NX;j++) {
-            H[j+nv*NX]=j<3?-e[j]:(j==3?1.0:0.0);
+            H[j+nv*NX]=j<3?-e[j]:(j==9?1.0:0.0);
         }
+
+        // test
+        // for (int k=0;k<(n+4);k++) {
+        //     for (j=0;j<NX;j++) {
+        //         printf("%lf ", H[k*NX+j]); 
+        //     }
+        //     printf("\n");
+        // }
+        // printf("----\n");
+
         /* time system offset and receiver bias correction */
-        if      (sys==SYS_GLO) {v[nv]-=x[4]; H[4+nv*NX]=1.0; mask[1]=1;}
-        else if (sys==SYS_GAL) {v[nv]-=x[5]; H[5+nv*NX]=1.0; mask[2]=1;}
-        else if (sys==SYS_CMP) {v[nv]-=x[6]; H[6+nv*NX]=1.0; mask[3]=1;}
-        else if (sys==SYS_IRN) {v[nv]-=x[7]; H[7+nv*NX]=1.0; mask[4]=1;}
+        if      (sys==SYS_GLO) {v[nv]-=x[10]; H[10+nv*NX]=1.0; mask[1]=1;}
+        else if (sys==SYS_GAL) {v[nv]-=x[11]; H[11+nv*NX]=1.0; mask[2]=1;}
+        else if (sys==SYS_CMP) {v[nv]-=x[12]; H[12+nv*NX]=1.0; mask[3]=1;}
+        else if (sys==SYS_IRN) {v[nv]-=x[13]; H[13+nv*NX]=1.0; mask[4]=1;}
 #if 0 /* enable QZS-GPS time offset estimation */
         else if (sys==SYS_QZS) {v[nv]-=x[8]; H[8+nv*NX]=1.0; mask[5]=1;}
 #endif
@@ -272,13 +281,15 @@ static int rescode(int iter, const obsd_t *obs, int n, const double *rs,
         trace(4,"sat=%2d azel=%5.1f %4.1f res=%7.3f sig=%5.3f\n",obs[i].sat,
               azel[i*2]*R2D,azel[1+i*2]*R2D,resp[i],sqrt(var[nv-1]));
     }
+
     /* constraint to avoid rank-deficient */
-    for (i=0;i<NX-3;i++) {
+    for (i=0;i<NX-9;i++) {
         if (mask[i]) continue;
         v[nv]=0.0;
-        for (j=0;j<NX;j++) H[j+nv*NX]=j==i+3?1.0:0.0;
+        for (j=0;j<NX;j++) H[j+nv*NX]=j==i+9?1.0:0.0;
         var[nv++]=0.01;
     }
+
     return nv;
 }
 
@@ -300,7 +311,7 @@ static void ekfinit(sol_t *sol, ekfsol_t *esol)
         esol->x[i]=sol->rr[i]; // position/velocity
     }
     for (i=0;i<5;i++) {
-        esol->x[i+9]=sol->dtr[i]; // clock bias/offset (s)
+        esol->x[i+9]=sol->dtr[i]*CLIGHT; // clock bias/offset (m)
     }
 
     /* covariance matrix */
@@ -358,7 +369,7 @@ static void predict(double tt, ekfsol_t *esol, prcopt_t *opt)
         }
     }
 
-    // /* process noise added to only acceleration */
+    /* process noise added to only acceleration */
     Q[0]=Q[4]=SQR(opt->prn[3])*fabs(tt);
     Q[8]=SQR(opt->prn[4])*fabs(tt);
     for (i=0;i<3;i++) {
@@ -375,40 +386,58 @@ static void predict(double tt, ekfsol_t *esol, prcopt_t *opt)
 }
 
 /* pseudorange residual */
-static void inno(const obsd_t *obs, int n, const nav_t *nav, ekfsol_t *esol, 
-                 const prcopt_t *opt, double *v, double *H)
+static int inno(const obsd_t *obs, int n, const nav_t *nav, ekfsol_t *esol, 
+                 const prcopt_t *opt, double *v, double *H, double *var)
 {
+    gtime_t time=obs[0].time;
     int i,nv,ns,svh[MAXOBS],vsat[MAXOBS]={0};
-    double *rs,*dts,*var,*azel,*resp;
-    double *v,*H;
-    double x[3+5]={0};
+    double *rs,*dts,*azel,*resp;
+    double x[NX]={0};
 
-    for (i=0;i<3;i++) {
+    for (i=0;i<NX;i++) {
         x[i] = esol->x[i];
     }
-    for (i=0;i<5;i++) {
-        x[i+3] = esol->x[i+9];
-    }
 
-    satposs(esol->time,obs,n,nav,opt->sateph,rs,dts,var,svh);
+    rs=mat(6,n); dts=mat(2,n);
+    satposs(time,obs,n,nav,opt->sateph,rs,dts,var,svh);
 
-    azel=zeros(2,n); v=mat(n+4,1); H=mat(NX,n+4);
-    nv=rescode(i,obs,n,rs,dts,var,svh,nav,x,opt,v,H,var,azel,vsat,resp,
+    azel=zeros(2,n); resp=mat(1,n);
+    nv=rescode(0,obs,n,rs,dts,var,svh,nav,x,opt,v,H,var,azel,vsat,resp,
                    &ns);
 
-    free(rs); free(dts); free(var); free(azel); free(resp);
+    free(rs); free(dts); free(azel); free(resp);
+    return nv;
 }
 
-// TODO
-static int update(const obsd_t *obs, int n, const double *rs, const double *dts,
-                  const double *vare, const int *svh, const nav_t *nav,
-                  const prcopt_t *opt, ekfsol_t *esol, double *azel, int *vsat,
-                  double *resp, char *msg)
+/* measurement update */
+static void update(const obsd_t *obs, int n, const nav_t *nav,
+                  const prcopt_t *opt, ekfsol_t *esol)
 {
-    double x[NX]={0},dx[NX],Q[NX*NX],*v,*H,*var,sig;
-    v=mat(n+4,1); H=mat(NX,n+4); var=mat(n+4,1);
+    gtime_t time=obs[0].time;
+    int info,i;
+    double x[NX]={0},P[NX*NX]={0},dx[NX],Q[NX*NX],*v,*H,*R,*var,sig;
+    v=mat(n+4,1); H=zeros(NX,n+4); var=mat(n+4,1); R=mat(n+4,n+4);
 
-    inno(obs, n, nav, esol, opt, v, H);
+    /* innovation */
+    int nv=inno(obs, n, nav, esol, opt, v, H, var);
+
+    /* measurement noise */
+    matcpy(x,esol->x,NX,1);
+    matcpy(P,esol->P,NX,NX);
+    R = zeros(n+4,n+4);
+    for (i=0;i<n+4;i++) {
+        R[i+i*(n+4)]=var[i];
+    }
+
+    /* kalman filter */
+    if ((info=filter(x,P,H,v,R,NX,nv))) {
+        std::cout << "kf update error" << std::endl;
+    }
+
+    /* update state and covariance matrix */
+    matcpy(esol->x,x,NX,1);
+    matcpy(esol->P,P,NX,NX);
+    esol->time=time;
 }
 
 int main(int argc, char **argv)
@@ -468,7 +497,11 @@ int main(int argc, char **argv)
     for (int i = n; (m = nextobsf(&obs, &i, 1)) > 0; i += m)
     {
         predict(tt, &esol, &opt);
-        // update();
+        update(&obs.data[i], m, &nav, &opt, &esol);
+        double ep[6] = {0};
+        time2epoch(esol.time, ep);
+        printf("%.0lf,%.0lf,%.0lf,%.0lf,%.0lf,%.0lf,%lf,%lf,%lf,%lf,%lf,%lf,\n", ep[0], ep[1], ep[2], ep[3], ep[4], ep[5],
+            esol.x[0], esol.x[1], esol.x[2], esol.x[3], esol.x[4], esol.x[5]);
     }
 
     return 0;
