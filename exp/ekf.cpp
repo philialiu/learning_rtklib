@@ -11,7 +11,7 @@
 #include <rtklib.h>
 #include <Eigen/LU>
 
-#define NX          (3*3+5*2)
+#define NX          (3*3+5)
 #define SQR(x)      ((x)*(x))
 #define ERR_CBIAS   0.3         /* code bias error Std (m) */
 #define MIN_EL      (5.0*D2R)   /* min elevation for measurement error (rad) */
@@ -254,15 +254,6 @@ static int rescode(int iter, const obsd_t *obs, int n, const double *rs,
             H[j+nv*NX]=j<3?-e[j]:(j==9?1.0:0.0);
         }
 
-        // test
-        // for (int k=0;k<(n+4);k++) {
-        //     for (j=0;j<NX;j++) {
-        //         printf("%lf ", H[k*NX+j]); 
-        //     }
-        //     printf("\n");
-        // }
-        // printf("----\n");
-
         /* time system offset and receiver bias correction */
         if      (sys==SYS_GLO) {v[nv]-=x[10]; H[10+nv*NX]=1.0; mask[1]=1;}
         else if (sys==SYS_GAL) {v[nv]-=x[11]; H[11+nv*NX]=1.0; mask[2]=1;}
@@ -290,6 +281,19 @@ static int rescode(int iter, const obsd_t *obs, int n, const double *rs,
         var[nv++]=0.01;
     }
 
+    // test
+    for (int k=0;k<(n+4);k++) {
+        for (j=0;j<NX;j++) {
+            printf("%lf ", H[k*NX+j]); 
+        }
+        printf("\n");
+    }
+    printf("----\n");
+    for (int k=0;k<nv;k++) {
+        printf("%lf ", var[k]);
+    }
+    printf("\n----\n");
+
     return nv;
 }
 
@@ -303,7 +307,8 @@ typedef struct {
 /* spp result to ekf vars */
 static void ekfinit(sol_t *sol, ekfsol_t *esol)
 {
-    int i, j;
+    int i,j;
+    double *P;
     esol->time = sol->time;
 
     /* state */
@@ -315,15 +320,18 @@ static void ekfinit(sol_t *sol, ekfsol_t *esol)
     }
 
     /* covariance matrix */
-    for (i=0;i<NX*NX;i++) {
-        esol->P[i] = 1000000;
-    }
+    P=zeros(NX,NX);
     for (i=0;i<3;i++) {
-        esol->P[i+i*NX]=sol->qr[i];
+        P[i+i*NX]=sol->qr[i];
     }
-    esol->P[1]   =esol->P[NX]    =sol->qr[3];
-    esol->P[NX+2]=esol->P[2*NX+1]=sol->qr[4];
-    esol->P[2]   =esol->P[2*NX]  =sol->qr[5];
+    P[1]   =P[NX]    =sol->qr[3];
+    P[NX+2]=P[2*NX+1]=sol->qr[4];
+    P[2]   =P[2*NX]  =sol->qr[5];
+    for (i=3;i<NX;i++) {
+        P[i+i*NX] = 1;
+    }
+    matcpy(esol->P,P,NX,NX);
+    free(P);
 
     // cmatd(esol->P, NX);
 }
@@ -331,7 +339,7 @@ static void ekfinit(sol_t *sol, ekfsol_t *esol)
 /* predict states */
 static void predict(double tt, ekfsol_t *esol, prcopt_t *opt)
 {
-    double *F,*P,*FP,*x,*xp,x_[3],pos[3],Q[NX*NX],Qv[9];
+    double *F,*P,*FP,*x,*xp,x_[3],pos[3],Q[3*3],Qv[9];
     int i,j;
 
     /* state transition of position/velocity/clock bias/clock drift */
@@ -343,31 +351,19 @@ static void predict(double tt, ekfsol_t *esol, prcopt_t *opt)
     for (i=0;i<3;i++) {
         F[i+(i+6)*NX]=SQR(tt)/2.0;
     }
-    for (i=0;i<5;i++) {
-        F[(i+3*3)+(i+3*3+5)*NX]=tt;
-    }
 
     /* display F */
     // cmatd(F, NX);
 
-    for (i=0;i<NX;i++) {
-        x[i]=esol->x[i];
-        for (j=0;j<NX;j++) {
-            P[i+j*NX]=esol->P[i+j*NX];
-        }
-    }
+    matcpy(P, esol->P, NX, NX);
+    // cmatd(P, NX);
     
     /* x=F*x, P=F*P*F+Q */
     matmul("NN",NX,1,NX,1.0,F,x,0.0,xp);
     matmul("NN",NX,NX,NX,1.0,F,P,0.0,FP);
     matmul("NT",NX,NX,NX,1.0,FP,F,0.0,P);
-    
-    for (i=0;i<NX;i++) {
-        esol->x[i]=xp[i];
-        for (j=0;j<NX;j++) {
-            esol->P[i+j*NX]=P[i+j*NX];
-        }
-    }
+
+    // cmatd(P, NX);
 
     /* process noise added to only acceleration */
     Q[0]=Q[4]=SQR(opt->prn[3])*fabs(tt);
@@ -378,11 +374,16 @@ static void predict(double tt, ekfsol_t *esol, prcopt_t *opt)
     ecef2pos(x_,pos);
     covecef(pos,Q,Qv);
     for (i=0;i<3;i++) for (j=0;j<3;j++) {
-        esol->P[i+6+(j+6)*NX]+=Qv[i+j*3];
+        P[i+6+(j+6)*NX]+=Qv[i+j*3];
     }
 
+    matcpy(esol->P, P, NX, NX);
+
+    // test
+    cmatd(esol->P, NX);
+
     free(F); free(P); free(FP); free(x); free(xp);
-    carrd(esol->x, NX);
+    // carrd(esol->x, NX);
 }
 
 /* pseudorange residual */
@@ -391,18 +392,18 @@ static int inno(const obsd_t *obs, int n, const nav_t *nav, ekfsol_t *esol,
 {
     gtime_t time=obs[0].time;
     int i,nv,ns,svh[MAXOBS],vsat[MAXOBS]={0};
-    double *rs,*dts,*azel,*resp;
+    double *rs,*dts,*azel,*resp,*vare;
     double x[NX]={0};
 
     for (i=0;i<NX;i++) {
         x[i] = esol->x[i];
     }
 
-    rs=mat(6,n); dts=mat(2,n);
-    satposs(time,obs,n,nav,opt->sateph,rs,dts,var,svh);
+    rs=mat(6,n); dts=mat(2,n); vare=mat(1,n);
+    satposs(time,obs,n,nav,opt->sateph,rs,dts,vare,svh);
 
     azel=zeros(2,n); resp=mat(1,n);
-    nv=rescode(0,obs,n,rs,dts,var,svh,nav,x,opt,v,H,var,azel,vsat,resp,
+    nv=rescode(0,obs,n,rs,dts,vare,svh,nav,x,opt,v,H,var,azel,vsat,resp,
                    &ns);
 
     free(rs); free(dts); free(azel); free(resp);
@@ -415,24 +416,28 @@ static void update(const obsd_t *obs, int n, const nav_t *nav,
 {
     gtime_t time=obs[0].time;
     int info,i;
-    double x[NX]={0},P[NX*NX]={0},dx[NX],Q[NX*NX],*v,*H,*R,*var,sig;
+    double x[NX]={0},P[NX*NX]={0},*v,*H,*R,*var;
     v=mat(n+4,1); H=zeros(NX,n+4); var=mat(n+4,1); R=mat(n+4,n+4);
 
     /* innovation */
     int nv=inno(obs, n, nav, esol, opt, v, H, var);
 
     /* measurement noise */
-    matcpy(x,esol->x,NX,1);
-    matcpy(P,esol->P,NX,NX);
     R = zeros(n+4,n+4);
     for (i=0;i<n+4;i++) {
         R[i+i*(n+4)]=var[i];
     }
 
+    // cmatd(R, n+4);
+
     /* kalman filter */
+    matcpy(x,esol->x,NX,1);
+    matcpy(P,esol->P,NX,NX);
     if ((info=filter(x,P,H,v,R,NX,nv))) {
         std::cout << "kf update error" << std::endl;
     }
+    cmatd(P, NX);
+    std::cout << time.time << ", P=" << P[0] << std::endl;
 
     /* update state and covariance matrix */
     matcpy(esol->x,x,NX,1);
