@@ -70,7 +70,7 @@ To use other satellite systems, add to `rtklib.h`:
 #define ENAIRN
 ```
 
-Then make again in `src/build`.
+Then `make` and `make install` again in `src/build`.
 
 
 ## Code Explanation Reference
