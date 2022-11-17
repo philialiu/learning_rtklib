@@ -199,7 +199,7 @@ static int rescode(int iter, const obsd_t *obs, int n, const double *rs,
 {
     gtime_t time;
     double r,freq,dion,dtrp,vmeas,vion,vtrp,rr[3],pos[3],dtr,e[3],P;
-    int i,j,nv=0,sat,sys,mask[NX-3]={0};
+    int i,j,nv=0,sat,sys,mask[NX-9]={0};
     
     trace(3,"resprng : n=%d\n",n);
     
@@ -273,6 +273,19 @@ static int rescode(int iter, const obsd_t *obs, int n, const double *rs,
               azel[i*2]*R2D,azel[1+i*2]*R2D,resp[i],sqrt(var[nv-1]));
     }
 
+    // test
+    // for (int k=0;k<(n+4);k++) {
+    //     for (j=0;j<NX;j++) {
+    //         printf("%lf ", H[k*NX+j]); 
+    //     }
+    //     printf("\n");
+    // }
+    // printf("----\n");
+    // for (int k=0;k<nv;k++) {
+    //     printf("%lf ", v[k]);
+    // }
+    // printf("\n----\n");
+
     /* constraint to avoid rank-deficient */
     for (i=0;i<NX-9;i++) {
         if (mask[i]) continue;
@@ -282,17 +295,17 @@ static int rescode(int iter, const obsd_t *obs, int n, const double *rs,
     }
 
     // test
-    for (int k=0;k<(n+4);k++) {
-        for (j=0;j<NX;j++) {
-            printf("%lf ", H[k*NX+j]); 
-        }
-        printf("\n");
-    }
-    printf("----\n");
-    for (int k=0;k<nv;k++) {
-        printf("%lf ", var[k]);
-    }
-    printf("\n----\n");
+    // for (int k=0;k<(n+4);k++) {
+    //     for (j=0;j<NX;j++) {
+    //         printf("%lf ", H[k*NX+j]); 
+    //     }
+    //     printf("\n");
+    // }
+    // printf("----\n");
+    // for (int k=0;k<nv;k++) {
+    //     printf("%lf ", v[k]);
+    // }
+    // printf("\n----\n");
 
     return nv;
 }
@@ -339,7 +352,7 @@ static void ekfinit(sol_t *sol, ekfsol_t *esol)
 /* predict states */
 static void predict(double tt, ekfsol_t *esol, prcopt_t *opt)
 {
-    double *F,*P,*FP,*x,*xp,x_[3],pos[3],Q[3*3],Qv[9];
+    double *F,*P,*FP,*x,*xp,x_[3],pos[3],Q[9]={0},Qv[9];
     int i,j;
 
     /* state transition of position/velocity/clock bias/clock drift */
@@ -380,7 +393,7 @@ static void predict(double tt, ekfsol_t *esol, prcopt_t *opt)
     matcpy(esol->P, P, NX, NX);
 
     // test
-    cmatd(esol->P, NX);
+    // cmatd(esol->P, NX);
 
     free(F); free(P); free(FP); free(x); free(xp);
     // carrd(esol->x, NX);
@@ -410,38 +423,96 @@ static int inno(const obsd_t *obs, int n, const nav_t *nav, ekfsol_t *esol,
     return nv;
 }
 
+static int filter_(const double *x, const double *P, const double *H,
+                   const double *v, const double *R, int n, int m,
+                   double *xp, double *Pp)
+{
+    double *F=mat(n,m),*Q=mat(m,m),*K=mat(n,m),*I=eye(n);
+    int info;
+    
+    matcpy(Q,R,m,m);
+    matcpy(xp,x,n,1);
+    matmul("NN",n,m,n,1.0,P,H,0.0,F);       /* Q=H'*P*H+R */
+    matmul("TN",m,m,n,1.0,H,F,1.0,Q);
+
+    // test
+    // for (int i=0;i<n;i++) {
+    //     for (int j=0;j<n;j++) {
+    //         printf("%lf ", P[i*n+j]); 
+    //     }
+    //     printf("\n");
+    // }
+    // printf("----\n");
+
+    // for (int i=0;i<m;i++) {
+    //     for (int j=0;j<n;j++) {
+    //         printf("%lf ", H[i*n+j]); 
+    //     }
+    //     printf("\n");
+    // }
+    // printf("----\n");
+
+    // for (int i=0;i<m;i++) {
+    //     for (int j=0;j<m;j++) {
+    //         printf("%lf ", Q[i*m+j]); 
+    //     }
+    //     printf("\n");
+    // }
+    // printf("----\n");
+
+    if (!(info=matinv(Q,m))) {
+        matmul("NN",n,m,m,1.0,F,Q,0.0,K);   /* K=P*H*Q^-1 */
+        matmul("NN",n,1,m,1.0,K,v,1.0,xp);  /* xp=x+K*v */
+        matmul("NT",n,n,m,-1.0,K,H,1.0,I);  /* Pp=(I-K*H')*P */
+        matmul("NN",n,n,n,1.0,I,P,0.0,Pp);
+    }
+    free(F); free(Q); free(K); free(I);
+    return info;
+}
+
 /* measurement update */
 static void update(const obsd_t *obs, int n, const nav_t *nav,
                   const prcopt_t *opt, ekfsol_t *esol)
 {
     gtime_t time=obs[0].time;
-    int info,i;
-    double x[NX]={0},P[NX*NX]={0},*v,*H,*R,*var;
-    v=mat(n+4,1); H=zeros(NX,n+4); var=mat(n+4,1); R=mat(n+4,n+4);
+    int info,i,j;
+    double x[NX]={0},P[NX*NX]={0},*v,*H,*R,*var,*v_,*H_,x_[NX]={0},P_[NX*NX]={0};
+    v=zeros(n+4,1); H=zeros(NX,n+4); var=zeros(n+4,1);
 
     /* innovation */
     int nv=inno(obs, n, nav, esol, opt, v, H, var);
 
     /* measurement noise */
-    R = zeros(n+4,n+4);
-    for (i=0;i<n+4;i++) {
-        R[i+i*(n+4)]=var[i];
+    R=zeros(nv,nv);
+    for (i=0;i<nv;i++) {
+        R[i+i*nv]=var[i];
     }
 
-    // cmatd(R, n+4);
+    // cmatd(R, nv);
+
+    /* prone matrix */
+    v_=zeros(nv,1); H_=zeros(NX,nv);
+    for (i=0;i<nv;i++) {
+        v_[i]=v[i];
+    }
+    for (i=0;i<NX*nv;i++) {
+        H_[i]=H[i];
+    }
 
     /* kalman filter */
     matcpy(x,esol->x,NX,1);
     matcpy(P,esol->P,NX,NX);
-    if ((info=filter(x,P,H,v,R,NX,nv))) {
+    // cmatd(P, NX);
+    // std::cout << "....." << std::endl;
+    if ((info=filter_(x,P,H_,v_,R,NX,nv,x_,P_))) {
         std::cout << "kf update error" << std::endl;
     }
-    cmatd(P, NX);
+    // cmatd(P, NX);
     std::cout << time.time << ", P=" << P[0] << std::endl;
 
     /* update state and covariance matrix */
-    matcpy(esol->x,x,NX,1);
-    matcpy(esol->P,P,NX,NX);
+    matcpy(esol->x,x_,NX,1);
+    matcpy(esol->P,P_,NX,NX);
     esol->time=time;
 }
 
@@ -503,10 +574,12 @@ int main(int argc, char **argv)
     {
         predict(tt, &esol, &opt);
         update(&obs.data[i], m, &nav, &opt, &esol);
-        double ep[6] = {0};
+        double ep[6] = {0}, x[3],pos[3];
+        for (int j=0;j<3;j++) x[j]=esol.x[j];
+        ecef2pos(x,pos);
         time2epoch(esol.time, ep);
         printf("%.0lf,%.0lf,%.0lf,%.0lf,%.0lf,%.0lf,%lf,%lf,%lf,%lf,%lf,%lf,\n", ep[0], ep[1], ep[2], ep[3], ep[4], ep[5],
-            esol.x[0], esol.x[1], esol.x[2], esol.x[3], esol.x[4], esol.x[5]);
+            pos[0], pos[1], pos[2], esol.x[3], esol.x[4], esol.x[5]);
     }
 
     return 0;
