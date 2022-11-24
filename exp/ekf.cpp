@@ -15,12 +15,13 @@
 #define SQR(x)      ((x)*(x))
 #define ERR_CBIAS   0.3         /* code bias error Std (m) */
 #define MIN_EL      (5.0*D2R)   /* min elevation for measurement error (rad) */
+#define SQRT(x)    ((x)<0.0||(x)!=(x)?0.0:sqrt(x))
 
-typedef struct {
-    sol_t   sol;        /* solution */
-    double  x[14];      /* position/velocity/acceleration/clock bias/clock drift */
-    double  P[14*14];   /* covariance matrix */
-} ekfsol_t;
+// typedef struct {
+//     sol_t   sol;        /* solution */
+//     double  x[14];      /* position/velocity/acceleration/clock bias/clock drift */
+//     double  P[14*14];   /* covariance matrix */
+// } ekfsol_t;
 
 /* --------- basic functions ----------- */
 static void cmatd(double *matrx, int n) // output matrix
@@ -331,7 +332,7 @@ static void ekfinit(sol_t *sol, ekfsol_t *esol)
 {
     int i,j;
     double *P;
-    esol->sol.time = sol->time;
+    esol->sol = *sol;
 
     /* state */
     for (i=0;i<6;i++) {
@@ -534,7 +535,7 @@ static void update(const obsd_t *obs, int n, const nav_t *nav,
     esol->sol.qv[3]=esol->P[NX*3+4];
     esol->sol.qv[4]=esol->P[NX*4+5];
     esol->sol.qv[5]=esol->P[NX*3+5];
-    for (i=0;i<5;i++) esol->sol.dtr[i]=esol->x[i+9];
+    for (i=0;i<5;i++) esol->sol.dtr[i]=esol->x[i+9]/CLIGHT;
 }
 
 /*-------- file --------- */
@@ -691,6 +692,7 @@ int main(int argc, char **argv)
     {
         predict(tt, &esol, &opt);
         update(&obs.data[i], m, &nav, &opt, &esol);
+        // sol_t sol_=esol.sol;
         outsol(fp, &esol.sol, rb, &solopt);
         tt = timediff(obs.data[i + m].time, obs.data[i].time);
         double ep[6]={0},pos[3];
