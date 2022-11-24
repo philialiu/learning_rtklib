@@ -9,12 +9,18 @@
 *-----------------------------------------------------------------------------*/
 #include <iostream>
 #include <rtklib.h>
-#include <Eigen/LU>
+#include <fstream>
 
 #define NX          (3*3+5)
 #define SQR(x)      ((x)*(x))
 #define ERR_CBIAS   0.3         /* code bias error Std (m) */
 #define MIN_EL      (5.0*D2R)   /* min elevation for measurement error (rad) */
+
+typedef struct {
+    sol_t   sol;        /* solution */
+    double  x[14];      /* position/velocity/acceleration/clock bias/clock drift */
+    double  P[14*14];   /* covariance matrix */
+} ekfsol_t;
 
 /* --------- basic functions ----------- */
 static void cmatd(double *matrx, int n) // output matrix
@@ -55,7 +61,7 @@ static void csat(obsd_t *obs, int n) // output satellite system
     }
 }
 
-static int nextobsf(const obs_t *obs, int *i, int rcv) // find next epoch
+static int nextobsf(const obs_t *obs, int *i, int rcv) // search next observation data index
 {
     double tt;
     int n;
@@ -79,6 +85,15 @@ char* charcat(const char* str1, const char* str2) // concatenate string
     strcpy(str3, str1);
     strcat(str3, str2);
     return str3;
+}
+
+static void ecef2lla(double *x, double *pos)
+{
+    double xx[3];
+    for (int j=0;j<3;j++) xx[j]=x[j];
+    ecef2pos(x,pos);
+    pos[0] *= R2D;
+    pos[1] *= R2D;
 }
 
 /* --------- spp --------- */
@@ -311,18 +326,12 @@ static int rescode(int iter, const obsd_t *obs, int n, const double *rs,
 }
 
 /* ------------ ekf ------------- */
-typedef struct {
-    gtime_t time;       /* time (GPST) */
-    double  x[NX];      /* position/velocity/acceleration/clock bias/clock drift */
-    double  P[NX*NX];   /* covariance matrix */
-} ekfsol_t;
-
 /* spp result to ekf vars */
 static void ekfinit(sol_t *sol, ekfsol_t *esol)
 {
     int i,j;
     double *P;
-    esol->time = sol->time;
+    esol->sol.time = sol->time;
 
     /* state */
     for (i=0;i<6;i++) {
@@ -403,7 +412,7 @@ static void predict(double tt, ekfsol_t *esol, prcopt_t *opt)
 static int inno(const obsd_t *obs, int n, const nav_t *nav, ekfsol_t *esol, 
                  const prcopt_t *opt, double *v, double *H, double *var)
 {
-    gtime_t time=obs[0].time;
+    esol->sol.time=obs[0].time;
     int i,nv,ns,svh[MAXOBS],vsat[MAXOBS]={0};
     double *rs,*dts,*azel,*resp,*vare;
     double x[NX]={0};
@@ -413,7 +422,7 @@ static int inno(const obsd_t *obs, int n, const nav_t *nav, ekfsol_t *esol,
     }
 
     rs=mat(6,n); dts=mat(2,n); vare=mat(1,n);
-    satposs(time,obs,n,nav,opt->sateph,rs,dts,vare,svh);
+    satposs(esol->sol.time,obs,n,nav,opt->sateph,rs,dts,vare,svh);
 
     azel=zeros(2,n); resp=mat(1,n);
     nv=rescode(0,obs,n,rs,dts,vare,svh,nav,x,opt,v,H,var,azel,vsat,resp,
@@ -490,7 +499,7 @@ static void update(const obsd_t *obs, int n, const nav_t *nav,
 
     // cmatd(R, nv);
 
-    /* prone matrix */
+    /* prune matrix */
     v_=zeros(nv,1); H_=zeros(NX,nv);
     for (i=0;i<nv;i++) {
         v_[i]=v[i];
@@ -498,6 +507,7 @@ static void update(const obsd_t *obs, int n, const nav_t *nav,
     for (i=0;i<NX*nv;i++) {
         H_[i]=H[i];
     }
+    free(v); free(H);
 
     /* kalman filter */
     matcpy(x,esol->x,NX,1);
@@ -513,31 +523,133 @@ static void update(const obsd_t *obs, int n, const nav_t *nav,
     /* update state and covariance matrix */
     matcpy(esol->x,x_,NX,1);
     matcpy(esol->P,P_,NX,NX);
-    esol->time=time;
+    free(v_); free(H_); free(R); free(var);
+    esol->sol.time=time;
+    for (i=0;i<6;i++) esol->sol.rr[i]=esol->x[i];
+    for (i=0;i<3;i++) esol->sol.qr[i]=esol->P[i+i*NX];
+    esol->sol.qr[3]=esol->P[1];
+    esol->sol.qr[4]=esol->P[NX+2];
+    esol->sol.qr[5]=esol->P[2];
+    for (i=0;i<3;i++) esol->sol.qv[i]=esol->P[(i+3)+(i+3)*NX];
+    esol->sol.qv[3]=esol->P[NX*3+4];
+    esol->sol.qv[4]=esol->P[NX*4+5];
+    esol->sol.qv[5]=esol->P[NX*3+5];
+    for (i=0;i<5;i++) esol->sol.dtr[i]=esol->x[i+9];
 }
+
+/*-------- file --------- */
+static void outheader(FILE *fp, char **file, int n, const prcopt_t *popt,
+                      const solopt_t *sopt, const obs_t *obss)
+{
+    const char *s1[]={"GPST","UTC","JST"};
+    gtime_t ts,te;
+    double t1,t2;
+    int i,j,w1,w2;
+    char s2[32],s3[32];
+    
+    trace(3,"outheader: n=%d\n",n);
+    
+    if (sopt->posf==SOLF_NMEA||sopt->posf==SOLF_STAT) {
+        return;
+    }
+    if (sopt->outhead) {
+        if (!*sopt->prog) {
+            fprintf(fp,"%s program   : RTKLIB ver.%s\n",COMMENTH,VER_RTKLIB);
+        }
+        else {
+            fprintf(fp,"%s program   : %s\n",COMMENTH,sopt->prog);
+        }
+        for (i=0;i<n;i++) {
+            fprintf(fp,"%s inp file  : %s\n",COMMENTH,file[i]);
+        }
+        for (i=0;i<obss->n;i++)    if (obss->data[i].rcv==1) break;
+        for (j=obss->n-1;j>=0;j--) if (obss->data[j].rcv==1) break;
+        if (j<i) {fprintf(fp,"\n%s no rover obs data\n",COMMENTH); return;}
+        ts=obss->data[i].time;
+        te=obss->data[j].time;
+        t1=time2gpst(ts,&w1);
+        t2=time2gpst(te,&w2);
+        if (sopt->times>=1) ts=gpst2utc(ts);
+        if (sopt->times>=1) te=gpst2utc(te);
+        if (sopt->times==2) ts=timeadd(ts,9*3600.0);
+        if (sopt->times==2) te=timeadd(te,9*3600.0);
+        time2str(ts,s2,1);
+        time2str(te,s3,1);
+        fprintf(fp,"%s obs start : %s %s (week%04d %8.1fs)\n",COMMENTH,s2,s1[sopt->times],w1,t1);
+        fprintf(fp,"%s obs end   : %s %s (week%04d %8.1fs)\n",COMMENTH,s3,s1[sopt->times],w2,t2);
+    }
+    outprcopt(fp,popt);
+    if (sopt->outhead||sopt->outopt) fprintf(fp,"%s\n",COMMENTH);
+    
+    outsolhead(fp,sopt);
+}
+
+static int outhead(const char *outfile, char **infile, int n,
+                   const prcopt_t *popt, const solopt_t *sopt, const obs_t *obs)
+{
+    FILE *fp=stdout;
+    
+    trace(3,"outhead: outfile=%s n=%d\n",outfile,n);
+    
+    if (*outfile) {
+        createdir(outfile);
+        
+        if (!(fp=fopen(outfile,"wb"))) {
+            std::cout << "error : cannot open output file" << std::endl;
+            return 0;
+        }
+    }
+    /* output header */
+    outheader(fp,infile,n,popt,sopt,obs);
+    
+    if (*outfile) fclose(fp);
+    
+    return 1;
+}
+
+static FILE *openfile(const char *outfile)
+{
+    trace(3,"openfile: outfile=%s\n",outfile);
+    
+    return !*outfile?stdout:fopen(outfile,"ab");
+}
+
 
 int main(int argc, char **argv)
 {
     gtime_t t0 = {0}, ts = {0}, te = {0};
 
     char filepath[] = "/home/philia/Documents/nav_data/uav_20211211/gnc01/data_20211211_150700/processed/";
-    char file1[] = "eph_202112110655.nav";
-    char file2[] = "ublox_20211211_14.obs";
+    char filename1[] = "eph_202112110655.nav";
+    char filename2[] = "ublox_20211211_14.obs";
+    char outfilename[] = "ublox_20211211_14_kf.pos";
+    char *file1_ = charcat(filepath, filename1);
+    char *file2_ = charcat(filepath, filename2);
+    char *infile[2];
+    char *outfile=charcat(filepath, outfilename);
+    infile[0] = &file1_[0]; infile[1] = &file2_[0];
+    FILE *fp;
+    fp=openfile(outfile);
 
     obs_t obs = {0};
     nav_t nav = {0};
     sta_t sta = {""};
 
-    prcopt_t opt = prcopt_default;
+    prcopt_t opt = prcopt_default; // positioning option
+    solopt_t solopt = solopt_default; // solution output options
     opt.navsys = SYS_GPS|SYS_GLO|SYS_GAL|SYS_CMP|SYS_QZS|SYS_IRN; // use all satellite systems
+    opt.ionoopt = 1;
+    opt.tropopt = 1;
+    
     sol_t sol;
     ekfsol_t esol;
     char msg[128];
 
     int m = 0;
+    double tt, rb[3]={0};
 
-    int stat1 = readrnxt(charcat(filepath, file1), 1, ts, te, 0.0, "", &obs, &nav, &sta);
-    int stat2 = readrnxt(charcat(filepath, file2), 1, t0, t0, 0.0, "", &obs, &nav, &sta);
+    int stat1 = readrnxt(file1_, 1, ts, te, 0.0, "", &obs, &nav, &sta);
+    int stat2 = readrnxt(file2_, 1, t0, t0, 0.0, "", &obs, &nav, &sta);
 
     if (stat1 && stat2)
     {
@@ -548,18 +660,23 @@ int main(int argc, char **argv)
         std::cout << "Fail to open files." << std::endl;
     }
 
+    /* write header to output file */
+    outhead(outfile,infile,2,&opt,&solopt,&obs);
+
     /* first epoch: spp */
     int i = 0;
     int n = nextobsf(&obs, &i, 1);
     int ret = pntpos(&obs.data[i], n, &nav, &opt, &sol, NULL, NULL, msg);
-    double tt = timediff(obs.data[i + n].time, obs.data[i].time);
+    outsol(fp,&sol,rb,&solopt);
+    tt = timediff(obs.data[i + n].time, obs.data[i].time);
     ekfinit(&sol, &esol);
     if (ret == 1) // 1：OK, 0: error
     {
-        double ep[6] = {0};
+        double ep[6] = {0},pos[3];
         time2epoch(sol.time, ep);
+        ecef2lla(sol.rr,pos);
         printf("%.0lf,%.0lf,%.0lf,%.0lf,%.0lf,%.0lf,%lf,%lf,%lf,%lf,%lf,%lf,\n", ep[0], ep[1], ep[2], ep[3], ep[4], ep[5],
-            sol.rr[0], sol.rr[1], sol.rr[2], sol.rr[3], sol.rr[4], sol.rr[5]);
+            pos[0], pos[1], pos[2], sol.rr[3], sol.rr[4], sol.rr[5]);
     }
     else
     {
@@ -574,13 +691,15 @@ int main(int argc, char **argv)
     {
         predict(tt, &esol, &opt);
         update(&obs.data[i], m, &nav, &opt, &esol);
-        double ep[6] = {0}, x[3],pos[3];
-        for (int j=0;j<3;j++) x[j]=esol.x[j];
-        ecef2pos(x,pos);
-        time2epoch(esol.time, ep);
+        outsol(fp, &esol.sol, rb, &solopt);
+        tt = timediff(obs.data[i + m].time, obs.data[i].time);
+        double ep[6]={0},pos[3];
+        ecef2lla(esol.x,pos);
+        time2epoch(esol.sol.time, ep);
         printf("%.0lf,%.0lf,%.0lf,%.0lf,%.0lf,%.0lf,%lf,%lf,%lf,%lf,%lf,%lf,\n", ep[0], ep[1], ep[2], ep[3], ep[4], ep[5],
             pos[0], pos[1], pos[2], esol.x[3], esol.x[4], esol.x[5]);
     }
+    fclose(fp);
 
     return 0;
 }
