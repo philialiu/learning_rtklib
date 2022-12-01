@@ -1,5 +1,5 @@
 /*------------------------------------------------------------------------------
-* ekf.c : spp ekf
+* ekf.cpp : spp ekf
 *
 *          Copyright (C) 2022 by Philia Liu, All rights reserved.
 *
@@ -10,6 +10,7 @@
 #include <iostream>
 #include <rtklib.h>
 #include <fstream>
+// #include "ekf.h"
 
 #define NX          (3*3+5)
 #define SQR(x)      ((x)*(x))
@@ -88,17 +89,17 @@ char* charcat(const char* str1, const char* str2) // concatenate string
     return str3;
 }
 
-char *strpl(char *str, char *oldstr, char *newstr)
+char* strpl(const char *str, const char *oldstr, const char *newstr)
 {
-	char *p = NULL;
+	const char *p = NULL;
 	int len = 0;
 	char* str_ = new char[1024];
 
-	p = strstr(str,oldstr);
+	p = strstr(str, oldstr);
 	len =  p - str;
 	strncpy(str_, str, len);
 	strcat(str_, newstr);
-	strcat(str_,p+strlen(oldstr));
+	strcat(str_, p + strlen(oldstr));
 
 	return str_;
 }
@@ -706,7 +707,7 @@ static FILE *openfile(const char *outfile)
 }
 
 
-int main(int argc, char **argv)
+int main_(int argc, char **argv)
 {
     gtime_t t0 = {0}, ts = {0}, te = {0};
 

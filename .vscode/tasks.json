@@ -7,8 +7,9 @@
             "args": [
                 "-fdiagnostics-color=always",
                 "-g",
-                "${file}",
-                "-l:librtklib.a",
+                "${fileDirname}/*.cpp",
+                "-l",
+                ":librtklib.a",
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}"
             ],

@@ -1,3 +1,6 @@
+#ifndef EKF_H
+#define EKF_H
+
 #include <iostream>
 #include <rtklib.h>
 
@@ -13,6 +16,7 @@ static void carrd(double *x, int n);
 static void csat(obsd_t *obs, int n);
 static int nextobsf(const obs_t *obs, int *i, int rcv);
 char* charcat(const char* str1, const char* str2);
+char* strpl(const char *str, const char *oldstr, const char *newstr);
 static void ecef2lla(double *x, double *pos);
 
 /* --------- spp --------- */
@@ -43,3 +47,5 @@ static void outheader(FILE *fp, char **file, int n, const prcopt_t *popt,
 static int outhead(const char *outfile, char **infile, int n,
                    const prcopt_t *popt, const solopt_t *sopt, const obs_t *obs);
 static FILE *openfile(const char *outfile);
+
+#endif
