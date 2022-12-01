@@ -88,6 +88,21 @@ char* charcat(const char* str1, const char* str2) // concatenate string
     return str3;
 }
 
+char *strpl(char *str, char *oldstr, char *newstr)
+{
+	char *p = NULL;
+	int len = 0;
+	char* str_ = new char[1024];
+
+	p = strstr(str,oldstr);
+	len =  p - str;
+	strncpy(str_, str, len);
+	strcat(str_, newstr);
+	strcat(str_,p+strlen(oldstr));
+
+	return str_;
+}
+
 static void ecef2lla(double *x, double *pos)
 {
     double xx[3];
@@ -326,6 +341,55 @@ static int rescode(int iter, const obsd_t *obs, int n, const double *rs,
     return nv;
 }
 
+static int resdop(const obsd_t *obs, int n, const double *rs, const double *dts,
+                  const nav_t *nav, const double *rr, const double *x,
+                  const double *azel, const int *vsat, double err, double *v,
+                  double *H)
+{
+    double freq,rate,pos[3],E[9],a[3],e[3],vs[3],cosel,sig;
+    int i,j,nv=0;
+    
+    trace(3,"resdop  : n=%d\n",n);
+    
+    ecef2pos(rr,pos); xyz2enu(pos,E);
+    
+    for (i=0;i<n&&i<MAXOBS;i++) {
+        
+        freq=sat2freq(obs[i].sat,obs[i].code[0],nav);
+        
+        if (obs[i].D[0]==0.0||freq==0.0||!vsat[i]||norm(rs+3+i*6,3)<=0.0) {
+            continue;
+        }
+        /* LOS (line-of-sight) vector in ECEF */
+        cosel=cos(azel[1+i*2]);
+        a[0]=sin(azel[i*2])*cosel;
+        a[1]=cos(azel[i*2])*cosel;
+        a[2]=sin(azel[1+i*2]);
+        matmul("TN",3,1,3,1.0,E,a,0.0,e);
+        
+        /* satellite velocity relative to receiver in ECEF */
+        for (j=0;j<3;j++) {
+            vs[j]=rs[j+3+i*6]-x[j];
+        }
+        /* range rate with earth rotation correction */
+        rate=dot(vs,e,3)+OMGE/CLIGHT*(rs[4+i*6]*rr[0]+rs[1+i*6]*x[0]-
+                                      rs[3+i*6]*rr[1]-rs[  i*6]*x[1]);
+        
+        /* Std of range rate error (m/s) */
+        sig=(err<=0.0)?1.0:err*CLIGHT/freq;
+        
+        /* range rate residual (m/s) */
+        v[nv]=(-obs[i].D[0]*CLIGHT/freq-(rate+x[3]-CLIGHT*dts[1+i*2]))/sig;
+        
+        /* design matrix */
+        for (j=0;j<4;j++) {
+            H[j+nv*4]=((j<3)?-e[j]:1.0)/sig;
+        }
+        nv++;
+    }
+    return nv;
+}
+
 /* ------------ ekf ------------- */
 /* spp result to ekf vars */
 static void ekfinit(sol_t *sol, ekfsol_t *esol)
@@ -410,26 +474,43 @@ static void predict(double tt, ekfsol_t *esol, prcopt_t *opt)
 }
 
 /* pseudorange residual */
-static int inno(const obsd_t *obs, int n, const nav_t *nav, ekfsol_t *esol, 
-                 const prcopt_t *opt, double *v, double *H, double *var)
+static int innocode(const obsd_t *obs, int n, const nav_t *nav, ekfsol_t *esol, 
+                    const prcopt_t *opt, double *v, double *H, double *var,
+                    double *rs, double *dts, double *azel, int *vsat)
 {
     esol->sol.time=obs[0].time;
-    int i,nv,ns,svh[MAXOBS],vsat[MAXOBS]={0};
-    double *rs,*dts,*azel,*resp,*vare;
+    int i,nv,ns,svh[MAXOBS];
+    double*resp,*vare;
     double x[NX]={0};
 
     for (i=0;i<NX;i++) {
         x[i] = esol->x[i];
     }
 
-    rs=mat(6,n); dts=mat(2,n); vare=mat(1,n);
+    vare=mat(1,n);
     satposs(esol->sol.time,obs,n,nav,opt->sateph,rs,dts,vare,svh);
 
-    azel=zeros(2,n); resp=mat(1,n);
+    resp=mat(1,n);
     nv=rescode(0,obs,n,rs,dts,vare,svh,nav,x,opt,v,H,var,azel,vsat,resp,
                    &ns);
 
-    free(rs); free(dts); free(azel); free(resp);
+    free(resp);
+    return nv;
+}
+
+/* doppler residual */
+static int innovel(const obsd_t *obs, int n, const nav_t *nav, ekfsol_t *esol, 
+                   const prcopt_t *opt, double *v, double *H,
+                   double *rs, double *dts, double *azel, int *vsat)
+{
+    double x[4]={0};
+    double err=opt->err[4]; /* Doppler error (Hz) */
+    int i,j,nv;
+
+    for (i=0;i<3;i++) x[i]=esol->x[i+3];
+
+    nv=resdop(obs,n,rs,dts,nav,esol->sol.rr,x,azel,vsat,err,v,H);
+
     return nv;
 }
 
@@ -485,14 +566,16 @@ static void update(const obsd_t *obs, int n, const nav_t *nav,
                   const prcopt_t *opt, ekfsol_t *esol)
 {
     gtime_t time=obs[0].time;
-    int info,i,j;
+    int info,i,j,vsat[MAXOBS]={0};
+    double *rs, *dts, *azel;
+    rs=mat(6,n); dts=mat(2,n); azel=zeros(2,n);
     double x[NX]={0},P[NX*NX]={0},*v,*H,*R,*var,*v_,*H_,x_[NX]={0},P_[NX*NX]={0};
     v=zeros(n+4,1); H=zeros(NX,n+4); var=zeros(n+4,1);
 
-    /* innovation */
-    int nv=inno(obs, n, nav, esol, opt, v, H, var);
+    /* pseudorange innovation */
+    int nv=innocode(obs, n, nav, esol, opt, v, H, var, rs, dts, azel, vsat);
 
-    /* measurement noise */
+    /* pseudorange measurement noise */
     R=zeros(nv,nv);
     for (i=0;i<nv;i++) {
         R[i+i*nv]=var[i];
@@ -508,7 +591,6 @@ static void update(const obsd_t *obs, int n, const nav_t *nav,
     for (i=0;i<NX*nv;i++) {
         H_[i]=H[i];
     }
-    free(v); free(H);
 
     /* kalman filter */
     matcpy(x,esol->x,NX,1);
@@ -519,6 +601,14 @@ static void update(const obsd_t *obs, int n, const nav_t *nav,
         std::cout << "kf update error" << std::endl;
     }
     // cmatd(P, NX);
+
+    /* doppler innovation */
+    // v=zeros(n+4,1); H=zeros(NX,n+4);
+    // if ((nv=innovel(obs, n, nav, esol, opt, v, H, rs, dts, azel, vsat))>=4) {
+    //     //kalman
+    // }
+    free(v); free(H);
+
     std::cout << time.time << ", P=" << P[0] << std::endl;
 
     /* update state and covariance matrix */
@@ -620,10 +710,12 @@ int main(int argc, char **argv)
 {
     gtime_t t0 = {0}, ts = {0}, te = {0};
 
-    char filepath[] = "/home/philia/Documents/nav_data/uav_20211211/gnc01/data_20211211_150700/processed/";
-    char filename1[] = "eph_202112110655.nav";
-    char filename2[] = "ublox_20211211_14.obs";
-    char outfilename[] = "ublox_20211211_14_kf.pos";
+    char filepath[] = "/home/philia/Documents/nav_data/uav_20211211/gnc01/data_20211211_151827/processed/";
+    char filename1[] = "eph_202112110707.nav";
+    char filename2[] = "ublox_20211211_15.obs";
+    char oldsuffix[] = ".obs";
+    char newsuffix[] = "_kf.pos";
+    char *outfilename = strpl(filename2, oldsuffix, newsuffix);
     char *file1_ = charcat(filepath, filename1);
     char *file2_ = charcat(filepath, filename2);
     char *infile[2];
@@ -659,6 +751,8 @@ int main(int argc, char **argv)
     else
     {
         std::cout << "Fail to open files." << std::endl;
+        std::cout << stat1 << stat2 << std::endl;
+        return 0;
     }
 
     /* write header to output file */
@@ -692,7 +786,6 @@ int main(int argc, char **argv)
     {
         predict(tt, &esol, &opt);
         update(&obs.data[i], m, &nav, &opt, &esol);
-        // sol_t sol_=esol.sol;
         outsol(fp, &esol.sol, rb, &solopt);
         tt = timediff(obs.data[i + m].time, obs.data[i].time);
         double ep[6]={0},pos[3];
