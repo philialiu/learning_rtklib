@@ -15,6 +15,8 @@ RINEX 2: <https://zhuanlan.zhihu.com/p/480371751>
 
 RINEX 3: <https://www.gnss.help/2017/04/22/rinex3-introduction/index.html>
 
+obs file explanation: <https://www.cnblogs.com/gary-guo/p/15726760.html>
+
 
 ## Convert raw data to RINEX
 
